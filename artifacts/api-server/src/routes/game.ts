@@ -41,10 +41,10 @@ const TROOP_STATS: Record<string, { hp: number; dmg: number }> = {
   goblin:    { hp: 45, dmg: 25 },
 };
 
-const GOLD_RATE_PER_MIN = 5;
-const ELIXIR_RATE_PER_MIN = 5;
-const MAX_GOLD = 50000;
-const MAX_ELIXIR = 50000;
+const GOLD_RATE_BY_LEVEL: Record<number, number> = { 1: 15, 2: 35, 3: 75 };
+const ELIXIR_RATE_BY_LEVEL: Record<number, number> = { 1: 15, 2: 35, 3: 75 };
+const MAX_GOLD = 100000;
+const MAX_ELIXIR = 100000;
 
 router.get("/kingdom", async (req, res) => {
   const userId = req.discordUser!.id;
@@ -76,10 +76,17 @@ router.post("/kingdom/collect", async (req, res) => {
   const [player] = await db.select().from(playersTable).where(eq(playersTable.userId, userId)).limit(1);
   if (!player) { res.status(404).json({ error: "Player not found" }); return; }
 
+  const buildings = await db.select().from(buildingsTable).where(eq(buildingsTable.userId, userId));
+  const goldMines = buildings.filter((b) => b.type === "gold_mine");
+  const elixirCollectors = buildings.filter((b) => b.type === "elixir_collector");
+
+  const goldRatePerMin = goldMines.reduce((sum, b) => sum + (GOLD_RATE_BY_LEVEL[b.level] ?? 15), 0);
+  const elixirRatePerMin = elixirCollectors.reduce((sum, b) => sum + (ELIXIR_RATE_BY_LEVEL[b.level] ?? 15), 0);
+
   const now = new Date();
-  const minutesPassed = Math.floor((now.getTime() - player.lastCollected.getTime()) / 60000);
-  const goldCollected = Math.min(minutesPassed * GOLD_RATE_PER_MIN, MAX_GOLD - player.gold);
-  const elixirCollected = Math.min(minutesPassed * ELIXIR_RATE_PER_MIN, MAX_ELIXIR - player.elixir);
+  const minutesPassed = (now.getTime() - player.lastCollected.getTime()) / 60000;
+  const goldCollected = Math.floor(Math.min(minutesPassed * goldRatePerMin, MAX_GOLD - player.gold));
+  const elixirCollected = Math.floor(Math.min(minutesPassed * elixirRatePerMin, MAX_ELIXIR - player.elixir));
 
   const newGold = Math.min(player.gold + goldCollected, MAX_GOLD);
   const newElixir = Math.min(player.elixir + elixirCollected, MAX_ELIXIR);
@@ -88,7 +95,7 @@ router.post("/kingdom/collect", async (req, res) => {
     .set({ gold: newGold, elixir: newElixir, lastCollected: now })
     .where(eq(playersTable.userId, userId));
 
-  res.json({ goldCollected, elixirCollected, newGold, newElixir });
+  res.json({ goldCollected, elixirCollected, newGold, newElixir, goldRatePerMin, elixirRatePerMin });
 });
 
 router.get("/buildings", async (req, res) => {
