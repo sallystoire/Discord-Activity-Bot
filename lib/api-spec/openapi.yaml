@@ -1,22 +1,29 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Paname City Discord Activity API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Discord authentication
+  - name: game
+    description: Game operations
+  - name: codes
+    description: Resource codes
+  - name: leaderboard
+    description: Rankings
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +31,305 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /token:
+    post:
+      operationId: exchangeToken
+      tags: [auth]
+      summary: Exchange Discord auth code for token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRequest"
+      responses:
+        "200":
+          description: Token exchanged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+
+  /game/kingdom:
+    get:
+      operationId: getKingdom
+      tags: [game]
+      summary: Get current player's kingdom (creates if new)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Kingdom data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Kingdom"
+
+  /game/kingdom/{userId}:
+    get:
+      operationId: getKingdomByUser
+      tags: [game]
+      summary: Get another player's kingdom
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Kingdom data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Kingdom"
+
+  /game/kingdom/collect:
+    post:
+      operationId: collectResources
+      tags: [game]
+      summary: Collect resources from mines and collectors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Collected resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectResult"
+
+  /game/buildings:
+    get:
+      operationId: getBuildings
+      tags: [game]
+      summary: Get all buildings of current player
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Buildings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Building"
+
+  /game/buildings/{buildingId}/upgrade:
+    post:
+      operationId: upgradeBuilding
+      tags: [game]
+      summary: Upgrade a building
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: buildingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Building upgraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Building"
+
+  /game/troops:
+    get:
+      operationId: getTroops
+      tags: [game]
+      summary: Get player's available troops
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Troops list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TroopSlot"
+
+  /game/troops/train:
+    post:
+      operationId: trainTroop
+      tags: [game]
+      summary: Train troops
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainTroopRequest"
+      responses:
+        "200":
+          description: Troop trained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainTroopResult"
+
+  /game/raids/targets:
+    get:
+      operationId: getRaidTargets
+      tags: [game]
+      summary: Get list of kingdoms to raid
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Raid targets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RaidTarget"
+
+  /game/raids/history:
+    get:
+      operationId: getRaidHistory
+      tags: [game]
+      summary: Get raid history for current player
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Raid history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Raid"
+
+  /game/raids/attack/{targetId}:
+    post:
+      operationId: attackKingdom
+      tags: [game]
+      summary: Attack another player's kingdom
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: targetId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Raid result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RaidResult"
+
+  /game/shop:
+    get:
+      operationId: getShopItems
+      tags: [game]
+      summary: Get available shop items
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Shop items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopItem"
+
+  /game/shop/purchase:
+    post:
+      operationId: purchaseItem
+      tags: [game]
+      summary: Purchase a shop item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseRequest"
+      responses:
+        "200":
+          description: Purchase result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseResult"
+
+  /game/codes/redeem:
+    post:
+      operationId: redeemCode
+      tags: [codes]
+      summary: Redeem a resource code in-game
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemCodeRequest"
+      responses:
+        "200":
+          description: Code redeemed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemCodeResult"
+
+  /game/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get top kingdoms leaderboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /game/profile:
+    get:
+      operationId: getProfile
+      tags: [game]
+      summary: Get current player's full profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Player profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerProfile"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +339,401 @@ components:
       required:
         - status
 
+    TokenRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required:
+        - code
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        user:
+          $ref: "#/components/schemas/DiscordUser"
+      required:
+        - access_token
+        - user
+
+    DiscordUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        discriminator:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        global_name:
+          type: string
+          nullable: true
+      required:
+        - id
+        - username
+        - discriminator
+
+    Kingdom:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        elixir:
+          type: integer
+        diamonds:
+          type: integer
+        trophies:
+          type: integer
+        townHallLevel:
+          type: integer
+        buildings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Building"
+        lastCollected:
+          type: string
+          format: date-time
+      required:
+        - userId
+        - username
+        - gold
+        - elixir
+        - diamonds
+        - trophies
+        - townHallLevel
+        - buildings
+        - lastCollected
+
+    Building:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [town_hall, gold_mine, elixir_collector, gold_storage, elixir_storage, barracks, army_camp, cannon, archer_tower, wall]
+        level:
+          type: integer
+        posX:
+          type: integer
+        posY:
+          type: integer
+        upgrading:
+          type: boolean
+        upgradeFinishesAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - type
+        - level
+        - posX
+        - posY
+        - upgrading
+
+    CollectResult:
+      type: object
+      properties:
+        goldCollected:
+          type: integer
+        elixirCollected:
+          type: integer
+        newGold:
+          type: integer
+        newElixir:
+          type: integer
+      required:
+        - goldCollected
+        - elixirCollected
+        - newGold
+        - newElixir
+
+    TroopSlot:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [barbarian, archer, giant, goblin]
+        count:
+          type: integer
+        housingSpace:
+          type: integer
+        attackDamage:
+          type: integer
+        hitPoints:
+          type: integer
+      required:
+        - type
+        - count
+        - housingSpace
+        - attackDamage
+        - hitPoints
+
+    TrainTroopRequest:
+      type: object
+      properties:
+        troopType:
+          type: string
+          enum: [barbarian, archer, giant, goblin]
+        quantity:
+          type: integer
+      required:
+        - troopType
+        - quantity
+
+    TrainTroopResult:
+      type: object
+      properties:
+        troopType:
+          type: string
+        count:
+          type: integer
+        goldSpent:
+          type: integer
+        elixirSpent:
+          type: integer
+      required:
+        - troopType
+        - count
+        - goldSpent
+        - elixirSpent
+
+    RaidTarget:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        trophies:
+          type: integer
+        townHallLevel:
+          type: integer
+        estimatedLoot:
+          type: integer
+      required:
+        - userId
+        - username
+        - trophies
+        - townHallLevel
+        - estimatedLoot
+
+    Raid:
+      type: object
+      properties:
+        id:
+          type: integer
+        attackerUserId:
+          type: string
+        defenderUserId:
+          type: string
+        attackerUsername:
+          type: string
+        defenderUsername:
+          type: string
+        goldLooted:
+          type: integer
+        elixirLooted:
+          type: integer
+        trophiesGained:
+          type: integer
+        stars:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - attackerUserId
+        - defenderUserId
+        - attackerUsername
+        - defenderUsername
+        - goldLooted
+        - elixirLooted
+        - trophiesGained
+        - stars
+        - createdAt
+
+    RaidResult:
+      type: object
+      properties:
+        stars:
+          type: integer
+        goldLooted:
+          type: integer
+        elixirLooted:
+          type: integer
+        trophiesGained:
+          type: integer
+        defenderTrophiesLost:
+          type: integer
+        newGold:
+          type: integer
+        newElixir:
+          type: integer
+      required:
+        - stars
+        - goldLooted
+        - elixirLooted
+        - trophiesGained
+        - defenderTrophiesLost
+        - newGold
+        - newElixir
+
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        costDiamonds:
+          type: integer
+        rewardGold:
+          type: integer
+        rewardElixir:
+          type: integer
+        category:
+          type: string
+          enum: [resources, speedup, troops]
+      required:
+        - id
+        - name
+        - description
+        - costDiamonds
+        - rewardGold
+        - rewardElixir
+        - category
+
+    PurchaseRequest:
+      type: object
+      properties:
+        itemId:
+          type: string
+      required:
+        - itemId
+
+    PurchaseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        newDiamonds:
+          type: integer
+        newGold:
+          type: integer
+        newElixir:
+          type: integer
+      required:
+        - success
+        - newDiamonds
+        - newGold
+        - newElixir
+
+    RedeemCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required:
+        - code
+
+    RedeemCodeResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        resource:
+          type: string
+        amount:
+          type: integer
+        newGold:
+          type: integer
+        newElixir:
+          type: integer
+        newDiamonds:
+          type: integer
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        trophies:
+          type: integer
+        townHallLevel:
+          type: integer
+      required:
+        - rank
+        - userId
+        - username
+        - trophies
+        - townHallLevel
+
+    PlayerProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        gold:
+          type: integer
+        elixir:
+          type: integer
+        diamonds:
+          type: integer
+        trophies:
+          type: integer
+        townHallLevel:
+          type: integer
+        totalAttacks:
+          type: integer
+        totalDefenses:
+          type: integer
+        winsCount:
+          type: integer
+      required:
+        - userId
+        - username
+        - gold
+        - elixir
+        - diamonds
+        - trophies
+        - townHallLevel
+        - totalAttacks
+        - totalDefenses
+        - winsCount
